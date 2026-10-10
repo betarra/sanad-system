@@ -1,13 +1,13 @@
 {
   "name": "نظام سند لتوثيق الجرحى",
   "short_name": "سند",
-  "start_url": "admin.html",
+  "start_url": "/sanad-system/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1e3a8a",
   "icons": [
     {
-      "src": "logo.jpg",
+      "src": "/sanad-system/logo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg"
     }
