@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الإدارة - نظام سند السحابي</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Tahoma', sans-serif; 
+            background: #f1f5f9; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px; 
+        }
+        #login-box, #admin-panel {
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 500px;
+        }
+        #login-box { text-align: center; max-width: 400px; }
+        #login-box h3 { color: #1e3a8a; margin-bottom: 10px; font-size: 20px; }
+        #login-box p { color: #64748b; font-size: 13px; margin-bottom: 25px; }
+        #admin-pass {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 20px;
+            outline: none;
+            letter-spacing: 2px;
+        }
+        .login-submit-btn, .submit-btn {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+        .login-submit-btn:hover, .submit-btn:hover { background: #1e40af; }
+        .error-msg { color: #ef4444; font-size: 13px; margin-top: 15px; display: none; }
+
+        #admin-panel { display: none; border-top: 6px solid #1e3a8a; }
+        .admin-title { text-align: center; color: #1e3a8a; margin-bottom: 20px; font-size: 18px; font-weight: bold; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #334155; font-size: 13px; }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            background: #f8fafc;
+        }
+        .form-group input:focus, .form-group textarea:focus { border-color: #1e3a8a; background: #fff; }
+        .preview-container { text-align: center; margin-bottom: 15px; }
+        #img-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #cbd5e1;
+            display: none;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-box">
+        <h3>تسجيل دخول المسؤول</h3>
+        <p>الرجاء إدخال كلمة المرور لحماية لوحة الإدارة</p>
+        <input type="password" id="admin-pass" placeholder="أدخل كلمة المرور...">
+        <button class="login-submit-btn" onclick="checkAdminPassword()">دخول</button>
+        <div id="error-text" class="error-msg">كلمة المرور غير صحيحة!</div>
+    </div>
+
+    <div id="admin-panel">
+        <div class="admin-title">تسجيل بيانات جريح جديد - نظام سند (سحابي)</div>
+        
+        <div class="form-group">
+            <label>الرقم العسكري أو الذاتي (مفتاح فريد):</label>
+            <input type="text" id="woundedId" placeholder="مثال: 98821">
+        </div>
+
+        <div class="form-group">
+            <label>الاسم الثلاثي:</label>
+            <input type="text" id="woundedName" placeholder="مثال: أحمد محمد العلي">
+        </div>
+
+        <div class="form-group">
+            <label>نوع التسهيلات الممنوحة:</label>
+            <textarea id="woundedService" rows="2">أولوية في الدوائر الرسمية والمعاملات</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>الصورة الشخصية:</label>
+            <input type="file" id="woundedImg" accept="image/*" onchange="previewImage(event)">
+        </div>
+
+        <div class="preview-container">
+            <img id="img-preview" alt="معاينة الصورة">
+        </div>
+
+        <button class="submit-btn" onclick="saveRecordToCloud()">حفظ السجل سحابياً بشكل نهائي ✓</button>
+    </div>
+
+    <!-- ربط مكتبات Firebase عبر CDN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCpjx61vbEkp-u7V4Qz8_FnM-58p2QH6Uc",
+          authDomain: "sanad-system-4f5cd.firebaseapp.com",
+          projectId: "sanad-system-4f5cd",
+          storageBucket: "sanad-system-4f5cd.firebasestorage.app",
+          messagingSenderId: "434093232152",
+          appId: "1:434093232152:web:86da032f473d5a4387b36d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.checkAdminPassword = function() {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === "nayler1989") {
+                document.getElementById('login-box').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+            } else {
+                document.getElementById('error-text').style.display = 'block';
+                document.getElementById('admin-pass').value = '';
+            }
+        };
+
+        let selectedImageBase64 = "";
+
+        window.previewImage = function(event) {
+            const reader = new FileReader();
+            reader.onload = function(){
+                const output = document.getElementById('img-preview');
+                output.src = reader.result;
+                output.style.display = 'block';
+                selectedImageBase64 = reader.result;
+            };
+            if(event.target.files[0]) {
+                reader.readAsDataURL(event.target.files[0]);
+            }
+        };
+
+        window.saveRecordToCloud = async function() {
+            const id = document.getElementById('woundedId').value.trim();
+            const name = document.getElementById('woundedName').value.trim();
+            const service = document.getElementById('woundedService').value.trim();
+
+            if(!id || !name) {
+                alert('الرجاء إدخال الرقم العسكري والاسم على الأقل!');
+                return;
+            }
+
+            try {
+                // حفظ البيانات مباشرة في قاعدة بيانات Firestore السحابية باستخدام الرقم العسكري كمعرّف فريد
+                await setDoc(doc(db, "wounded", id), {
+                    name: name,
+                    service: service,
+                    img: selectedImageBase64 || "",
+                    status: "معتمد رسمياً ✔",
+                    createdAt: new Date().toISOString()
+                });
+
+                alert('تم حفظ بيانات الجريح (رقم: ' + id + ') في السحاب بنجاح تام! ☁️');
+                
+                document.getElementById('woundedId').value = '';
+                document.getElementById('woundedName').value = '';
+                document.getElementById('woundedService').value = '';
+                document.getElementById('img-preview').style.display = 'none';
+                selectedImageBase64 = "";
+            } catch (error) {
+                console.error("خطأ أثناء الحفظ:", error);
+                alert('حدث خطأ أثناء الحفظ السحابي، تأكد من الاتصال بالإنترنت.');
+            }
+        };
+    </script>
+</body>
+</html>

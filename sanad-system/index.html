@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة التحقق الرسمي - نظام سند</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Tahoma', sans-serif; 
+            background: #f1f5f9; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px; 
+        }
+        .search-box {
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+        .search-box h3 { color: #1e3a8a; margin-bottom: 20px; font-size: 20px; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            text-align: center;
+        }
+        input:focus { border-color: #1e3a8a; }
+        button {
+            background: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #1e40af; }
+        .msg { font-size: 14px; margin-top: 15px; }
+        .error { color: #ef4444; }
+        
+        /* تصميم بطاقة النتيجة عند نجاح التحقق */
+        #result-card {
+            display: none;
+            margin-top: 20px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: right;
+        }
+        .card-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }
+        .card-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #1e3a8a; }
+        .card-title h4 { color: #1e3a8a; font-size: 16px; margin-bottom: 4px; }
+        .card-title span { color: #10b981; font-size: 12px; font-weight: bold; background: #d1fae5; padding: 2px 8px; border-radius: 20px; }
+        .card-body p { font-size: 13px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+        .card-body strong { color: #0f172a; }
+    </style>
+</head>
+<body>
+
+    <div class="search-box">
+        <h3>بوابة التحقق - نظام سند</h3>
+        <div class="input-group">
+            <input type="text" id="searchId" placeholder="أدخل الرقم العسكري...">
+            <button onclick="searchCloudRecord()">بحث</button>
+        </div>
+        <div id="message-container"></div>
+
+        <div id="result-card">
+            <div class="card-header">
+                <img id="resImg" class="card-img" src="" alt="صورة الجريح">
+                <div class="card-title">
+                    <h4 id="resName">--</h4>
+                    <span id="resStatus">معتمد رسمياً ✔</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <p><strong>الرقم العسكري:</strong> <span id="resId">--</span></p>
+                <p><strong>التسهيلات الممنوحة:</strong> <span id="resService">--</span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ربط مكتبات Firebase عبر CDN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCpjx61vbEkp-u7V4Qz8_FnM-58p2QH6Uc",
+          authDomain: "sanad-system-4f5cd.firebaseapp.com",
+          projectId: "sanad-system-4f5cd",
+          storageBucket: "sanad-system-4f5cd.firebasestorage.app",
+          messagingSenderId: "434093232152",
+          appId: "1:434093232152:web:86da032f473d5a4387b36d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.searchCloudRecord = async function() {
+            const id = document.getElementById('searchId').value.trim();
+            const msgContainer = document.getElementById('message-container');
+            const resultCard = document.getElementById('result-card');
+
+            msgContainer.innerHTML = "";
+            resultCard.style.display = "none";
+
+            if (!id) {
+                msgContainer.innerHTML = '<div class="msg error">الرجاء إدخال الرقم العسكري للبحث!</div>';
+                return;
+            }
+
+            try {
+                msgContainer.innerHTML = '<div class="msg" style="color:#64748b;">جاري البحث في السحاب...</div>';
+                
+                // جلب المستند مباشرة من قاعدة بيانات Firestore باستخدام الرقم العسكري كمفتاح أساسي
+                const docRef = doc(db, "wounded", id);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    msgContainer.innerHTML = "";
+                    
+                    document.getElementById('resId').innerText = id;
+                    document.getElementById('resName').innerText = data.name;
+                    document.getElementById('resService').innerText = data.service;
+                    document.getElementById('resImg').src = data.img || "https://via.placeholder.com/60";
+                    document.getElementById('resStatus').innerText = data.status;
+                    
+                    resultCard.style.display = "block";
+                } else {
+                    msgContainer.innerHTML = '<div class="msg error">عذراً، هذا الرقم غير موجود أو غير مسجل في النظام!</div>';
+                }
+            } catch (error) {
+                console.error("خطأ في البحث:", error);
+                msgContainer.innerHTML = '<div class="msg error">حدث خطأ في الاتصال بالشبكة.</div>';
+            }
+        };
+    </script>
+</body>
+</html>
